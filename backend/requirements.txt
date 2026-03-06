@@ -1,0 +1,19 @@
+fastapi
+uvicorn
+motor
+pymongo
+python-dotenv
+numpy
+pydantic
+
+
+# What each package does (simple):
+# - `fastapi` → creates your API
+# - `uvicorn` → runs your API like a server
+# - `motor` → connects Python to MongoDB (async)
+# - `pymongo` → MongoDB tools
+# - `python-dotenv` → reads your .env secret file
+# - `numpy` → math library for Poisson/random numbers
+# - `pydantic` → makes sure data has correct shape
+
+
