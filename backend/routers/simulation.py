@@ -15,7 +15,6 @@ router = APIRouter()
 async def run_simulation(data: dict):
     db = get_db()
 
-    # Save INPUT to simulations collection (Table 1)
     sim_input = {
         "created_at": datetime.utcnow(),
         "scenario_type": data["scenario_type"],
@@ -28,12 +27,19 @@ async def run_simulation(data: dict):
     inserted_sim = await db["simulations"].insert_one(sim_input)
     simulation_id = str(inserted_sim.inserted_id)
 
-    # Run the math
     runner = SimulationRunner(data)
     result = runner.run(simulation_id)
 
-    # Save OUTPUT to simulation_results collection (Table 2)
-    await db["simulation_results"].insert_one(result)
+    # ✅ Make sure simulation_id is a plain string before saving
+    result_to_save = dict(result)
+    result_to_save["simulation_id"] = simulation_id  # explicitly set as string
+    result_to_save.pop("_id", None)
+
+    await db["simulation_results"].insert_one(result_to_save)
+
+    result.pop("_id", None)
+    sim_input.pop("_id", None)
+    sim_input["id"] = simulation_id
 
     return {
         "simulation_id": simulation_id,
@@ -55,9 +61,24 @@ async def get_history():
 @router.get("/result/{simulation_id}")
 async def get_result(simulation_id: str):
     db = get_db()
-    result = await db["simulation_results"].find_one({"simulation_id": simulation_id})
+    
+    # Try finding by simulation_id field (string match)
+    result = await db["simulation_results"].find_one(
+        {"simulation_id": simulation_id}
+    )
+    
+    # If not found, try finding by _id directly
+    if not result:
+        try:
+            result = await db["simulation_results"].find_one(
+                {"_id": ObjectId(simulation_id)}
+            )
+        except:
+            pass
+
     if not result:
         return {"error": "Result not found"}
+    
     result["id"] = str(result["_id"])
     del result["_id"]
     return result
