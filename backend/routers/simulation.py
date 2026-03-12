@@ -13,8 +13,9 @@ router = APIRouter()
 # ✅ Run simulation - saves to BOTH collections
 @router.post("/run")
 async def run_simulation(data: dict):
+    print("Received simulation request:", data)
     db = get_db()
-
+    print("DB simulation request:", db)
     # Save INPUT to simulations collection (Table 1)
     sim_input = {
         "created_at": datetime.utcnow(),
@@ -27,6 +28,7 @@ async def run_simulation(data: dict):
     }
     inserted_sim = await db["simulations"].insert_one(sim_input)
     simulation_id = str(inserted_sim.inserted_id)
+    print("Simulation ID:", simulation_id)
 
     # Run the math
     runner = SimulationRunner(data)
@@ -34,6 +36,9 @@ async def run_simulation(data: dict):
 
     # Save OUTPUT to simulation_results collection (Table 2)
     await db["simulation_results"].insert_one(result)
+
+    print("Complete")
+
 
     return {
         "simulation_id": simulation_id,

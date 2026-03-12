@@ -4,13 +4,20 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Info } from "lucide-react";
+import { useNavigate } from "react-router";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export function RunSimulation() {
+  const navigate = useNavigate();
   const [rideArrivalRate, setRideArrivalRate] = useState(5.0);
   const [driverServiceRate, setDriverServiceRate] = useState(4.5);
   const [duration, setDuration] = useState(120);
   const [iterations, setIterations] = useState(1000);
   const [surgeThreshold, setSurgeThreshold] = useState(75);
+  const [activePreset, setActivePreset] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const presets = [
     { name: "Normal Day", rideRate: 4.5, driverRate: 5.0 },
@@ -19,9 +26,61 @@ export function RunSimulation() {
     { name: "Festival", rideRate: 12.0, driverRate: 6.0 },
   ];
 
-  const applyPreset = (preset: typeof presets[0]) => {
+  const applyPreset = (preset: typeof presets[0], index: number) => {
     setRideArrivalRate(preset.rideRate);
     setDriverServiceRate(preset.driverRate);
+    setActivePreset(index);
+  };
+
+  const handleRideRateChange = (value: number) => {
+    setRideArrivalRate(value);
+    setActivePreset(null); // Clear active state when manually changing
+  };
+
+  const handleDriverRateChange = (value: number) => {
+    setDriverServiceRate(value);
+    setActivePreset(null); // Clear active state when manually changing
+  };
+
+  const handleRunSimulation = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    const scenarioType = activePreset !== null ? presets[activePreset].name : "Custom";
+    
+    const payload = {
+      scenario_type: scenarioType,
+      lambda_r: rideArrivalRate,
+      lambda_d: driverServiceRate,
+      surge_threshold: surgeThreshold,
+      duration: duration,
+      iterations: iterations,
+    };
+
+    try {
+      const response = await fetch(`${API_URL}/api/simulation/run`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Simulation created:", data);
+      
+      // Navigate to results page with the simulation ID
+      navigate(`/results?id=${data.simulation_id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to run simulation");
+      console.error("Error running simulation:", err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -29,6 +88,27 @@ export function RunSimulation() {
       <div className="max-w-6xl mx-auto grid grid-cols-3 gap-8">
         {/* Main Form */}
         <div className="col-span-2 bg-white rounded-xl p-8 shadow-sm border border-gray-100 space-y-8">
+         
+         {/* Scenario Presets */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg text-gray-900">Scenario Presets</h3>
+            <div className="grid grid-cols-4 gap-3">
+              {presets.map((preset, index) => (
+                <Button
+                  key={preset.name}
+                  variant="outline"
+                  onClick={() => applyPreset(preset, index)}
+                  className={`w-full cursor-pointer ${
+                    activePreset === index
+                      ? "bg-black text-white hover:bg-black hover:text-white"
+                      : ""
+                  }`}
+                >
+                  {preset.name}
+                </Button>
+              ))}
+            </div>
+          </div>
           {/* Demand Parameters */}
           <div className="space-y-4">
             <h3 className="font-semibold text-lg text-gray-900">Demand Parameters</h3>
@@ -38,13 +118,13 @@ export function RunSimulation() {
                 id="rideRate"
                 type="number"
                 value={rideArrivalRate}
-                onChange={(e) => setRideArrivalRate(parseFloat(e.target.value))}
+                onChange={(e) => handleRideRateChange(parseFloat(e.target.value))}
                 step="0.1"
               />
               <p className="text-sm text-gray-500">Poisson arrival rate per minute</p>
               <Slider
                 value={[rideArrivalRate]}
-                onValueChange={(vals) => setRideArrivalRate(vals[0])}
+                onValueChange={(vals) => handleRideRateChange(vals[0])}
                 min={0}
                 max={15}
                 step={0.1}
@@ -62,13 +142,13 @@ export function RunSimulation() {
                 id="driverRate"
                 type="number"
                 value={driverServiceRate}
-                onChange={(e) => setDriverServiceRate(parseFloat(e.target.value))}
+                onChange={(e) => handleDriverRateChange(parseFloat(e.target.value))}
                 step="0.1"
               />
               <p className="text-sm text-gray-500">Driver service rate per minute</p>
               <Slider
                 value={[driverServiceRate]}
-                onValueChange={(vals) => setDriverServiceRate(vals[0])}
+                onValueChange={(vals) => handleDriverRateChange(vals[0])}
                 min={0}
                 max={15}
                 step={0.1}
@@ -119,26 +199,23 @@ export function RunSimulation() {
             </div>
           </div>
 
-          {/* Scenario Presets */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg text-gray-900">Scenario Presets</h3>
-            <div className="grid grid-cols-4 gap-3">
-              {presets.map((preset) => (
-                <Button
-                  key={preset.name}
-                  variant="outline"
-                  onClick={() => applyPreset(preset)}
-                  className="w-full"
-                >
-                  {preset.name}
-                </Button>
-              ))}
+          
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
+              <strong>Error:</strong> {error}
             </div>
-          </div>
+          )}
 
           {/* Run Button */}
-          <Button className="w-full" size="lg">
-            Run Simulation
+          <Button 
+            className="w-full" 
+            size="lg"
+            onClick={handleRunSimulation}
+            disabled={isLoading}
+          >
+            {isLoading ? "Running Simulation..." : "Run Simulation"}
           </Button>
         </div>
 
