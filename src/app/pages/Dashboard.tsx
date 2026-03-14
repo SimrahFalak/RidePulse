@@ -99,35 +99,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Map Section */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-        <h3 className="font-semibold text-lg mb-4 text-gray-900">City Demand Heatmap</h3>
-        <div className="w-full h-96 bg-gray-100 rounded-lg relative overflow-hidden">
-          {/* Simplified map visualization */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-full h-full relative">
-                {/* Surge zones */}
-                <div className="absolute top-20 left-32 w-32 h-32 bg-red-300 rounded-full opacity-50 blur-2xl"></div>
-                <div className="absolute bottom-24 right-40 w-40 h-40 bg-orange-300 rounded-full opacity-50 blur-2xl"></div>
-                <div className="absolute top-40 right-32 w-24 h-24 bg-yellow-300 rounded-full opacity-50 blur-2xl"></div>
-                
-                {/* Driver dots */}
-                {[...Array(20)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="absolute w-3 h-3 bg-blue-500 rounded-full shadow-lg"
-                    style={{
-                      left: `${Math.random() * 90 + 5}%`,
-                      top: `${Math.random() * 90 + 5}%`,
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+   
 
       {/* Recent Simulation Summary */}
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
