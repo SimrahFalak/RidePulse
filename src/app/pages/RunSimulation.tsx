@@ -6,7 +6,14 @@ import { Label } from "../components/ui/label";
 import { Info } from "lucide-react";
 import { useNavigate } from "react-router";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const rawApiUrl =
+  (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL ||
+  "http://localhost:8000";
+const API_URL = rawApiUrl.replace(/\/+$/, "");
+
+const RUN_SIMULATION_ENDPOINT = API_URL.endsWith("/api")
+  ? `${API_URL}/simulation/run`
+  : `${API_URL}/api/simulation/run`;
 
 export function RunSimulation() {
   const navigate = useNavigate();
@@ -58,7 +65,7 @@ export function RunSimulation() {
     };
 
     try {
-      const response = await fetch(`${API_URL}/api/simulation/run`, {
+      const response = await fetch(RUN_SIMULATION_ENDPOINT, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -67,7 +74,10 @@ export function RunSimulation() {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(
+          `HTTP ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ""}`
+        );
       }
 
       const data = await response.json();
