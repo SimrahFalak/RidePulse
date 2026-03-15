@@ -39,6 +39,16 @@ export function Reports() {
       finalState: "Balanced",
       status: "Completed",
     },
+
+     {
+      id: 5,
+      date: "Feb 24, 2026",
+      time: "11:22",
+      parameters: "λ_r: 4.5, λ_d: 5.0",
+      duration: "100 min",
+      finalState: "Balanced",
+      status: "Completed",
+    },
   ];
 
   return (
@@ -98,29 +108,7 @@ export function Reports() {
             </div>
           </div>
 
-          {/* Export Options */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <h3 className="font-semibold text-lg mb-4 text-gray-900">Export Options</h3>
-            <div className="grid grid-cols-3 gap-4">
-              <Button variant="outline" className="h-24 flex flex-col gap-2">
-                <FileText className="w-6 h-6 text-red-500" />
-                <span className="font-medium">PDF Report</span>
-                <span className="text-xs text-gray-500">Full analysis</span>
-              </Button>
-              
-              <Button variant="outline" className="h-24 flex flex-col gap-2">
-                <FileSpreadsheet className="w-6 h-6 text-green-500" />
-                <span className="font-medium">Export CSV</span>
-                <span className="text-xs text-gray-500">Raw data</span>
-              </Button>
-              
-              <Button variant="outline" className="h-24 flex flex-col gap-2">
-                <Image className="w-6 h-6 text-blue-500" />
-                <span className="font-medium">Chart Images</span>
-                <span className="text-xs text-gray-500">PNG format</span>
-              </Button>
-            </div>
-          </div>
+        
         </div>
 
         {/* Right: Report Preview */}
@@ -174,24 +162,7 @@ export function Reports() {
             </Button>
           </div>
 
-          {/* Key Metrics Summary */}
-          <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-100">
-            <h4 className="font-semibold text-gray-900 mb-3">Report Summary</h4>
-            <div className="space-y-3">
-              <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3">
-                <p className="text-xs text-gray-500">Total Simulations</p>
-                <p className="text-2xl font-bold text-gray-900">247</p>
-              </div>
-              <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3">
-                <p className="text-xs text-gray-500">Avg Stability Score</p>
-                <p className="text-2xl font-bold text-green-600">0.84</p>
-              </div>
-              <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3">
-                <p className="text-xs text-gray-500">Most Common State</p>
-                <p className="text-lg font-bold text-blue-600">Balanced</p>
-              </div>
-            </div>
-          </div>
+         
         </div>
       </div>
     </div>
