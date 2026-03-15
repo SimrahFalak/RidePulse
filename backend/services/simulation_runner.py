@@ -29,19 +29,21 @@ class SimulationRunner:
 
     def run(self, simulation_id: str) -> dict:
         duration = self.input["duration"]
-        active_drivers = int(100 * self.input["lambda_d"])
+        # lambda_d is treated as per-minute service capacity
+        base_supply = max(1, int(round(self.input["lambda_d"])))
+        total_drivers = max(base_supply, int(round(self.input["lambda_d"] * 100)))
         surge_threshold = self.input["surge_threshold"]
         iterations = self.input["iterations"]
 
         # Run multiple iterations and average results
         all_results = []
         for _ in range(iterations):
-            all_results.append(self._single_run(duration, active_drivers, surge_threshold))
+            all_results.append(self._single_run(duration, base_supply, total_drivers, surge_threshold))
 
         # Average across all iterations
         avg_wait = round(sum(r["total_wait"] for r in all_results) / iterations, 2)
         avg_queue = round(sum(r["avg_queue"] for r in all_results) / iterations, 2)
-        surge_prob = round(sum(r["surge_triggered"] for r in all_results) / iterations * 100, 2)
+        surge_prob = round(sum(r["surge_rate"] for r in all_results) / iterations, 2)
         total_requests = int(sum(r["total_requests"] for r in all_results) / iterations)
         utilization = round(sum(r["utilization"] for r in all_results) / iterations, 2)
 
@@ -60,21 +62,22 @@ class SimulationRunner:
             "driver_utilization": utilization,
             "stability_score": stability,
             "total_ride_requests": total_requests,
-            "active_drivers": active_drivers,
+            "total_drivers": total_drivers,
+            "active_drivers": base_supply,
             "steady_state_json": self.calculate_steady_state(),
             "transition_matrix_json": self.markov.matrix.tolist(),
             "time_series_json": last_run["timeline"],
             "state_distribution_json": last_run["state_distribution"]
         }
 
-    def _single_run(self, duration, active_drivers, surge_threshold) -> dict:
+    def _single_run(self, duration, base_supply, total_drivers, surge_threshold) -> dict:
         """One complete simulation run"""
         arrivals = self.poisson.generate_arrivals(duration)
         pending = 0
         total_wait = 0
         total_requests = 0
         total_queue = 0
-        surge_triggered = False
+        surge_minutes = 0
         state_counts = {s: 0 for s in STATES}
         timeline = []
 
@@ -87,33 +90,36 @@ class SimulationRunner:
             total_requests += new_req
             pending += new_req
 
-            served = min(active_drivers, pending)
+            available_supply = max(1, min(total_drivers, int(np.random.poisson(base_supply))))
+
+            # Measure pressure before dispatching drivers this minute.
+            demand_ratio = round(pending / max(available_supply, 1), 2)
+            surge_now = demand_ratio * 100 >= surge_threshold
+            if surge_now:
+                surge_minutes += 1
+
+            served = min(available_supply, pending)
             pending = max(0, pending - served)
 
-            wait_time = round((pending / max(active_drivers, 0.1)) * 5, 2)
-            demand_ratio = round(pending / max(active_drivers, 1), 2)
-            utilization = round((served / max(active_drivers, 1)) * 100, 1)
+            wait_time = round((pending / max(available_supply, 0.1)) * 5, 2)
+            utilization = round((served / max(available_supply, 1)) * 100, 1)
 
             state = self.markov.next_state()
             state_counts[state] += 1
-
-            # Check surge threshold
-            if demand_ratio * 100 >= surge_threshold:
-                surge_triggered = True
 
             # Cancellations
             if wait_time > 8:
                 cancelled = int(pending * 0.3)
                 pending = max(0, pending - cancelled)
 
-            surge_mult = round(1.5 + demand_ratio * 0.3, 2) if surge_triggered else 1.0
+            surge_mult = round(1.5 + demand_ratio * 0.3, 2) if surge_now else 1.0
             total_wait += wait_time
             total_queue += pending
 
             timeline.append({
                 "minute": minute,
                 "demand": new_req,
-                "supply": active_drivers,
+                "supply": available_supply,
                 "queue": pending,
                 "state": state,
                 "wait_time": wait_time,
@@ -124,7 +130,7 @@ class SimulationRunner:
         return {
             "total_wait": round(total_wait / duration, 2),
             "avg_queue": round(total_queue / duration, 2),
-            "surge_triggered": 1 if surge_triggered else 0,
+            "surge_rate": round((surge_minutes / max(duration, 1)) * 100, 2),
             "total_requests": total_requests,
             "utilization": round((total_requests - pending) / max(total_requests, 1) * 100, 1),
             "timeline": timeline,

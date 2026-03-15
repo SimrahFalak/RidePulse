@@ -7,6 +7,7 @@ from fastapi.responses import StreamingResponse
 import asyncio
 import csv
 import io
+import numpy as np
 
 router = APIRouter()
 
@@ -27,7 +28,7 @@ async def run_simulation(data: dict):
     inserted_sim = await db["simulations"].insert_one(sim_input)
     simulation_id = str(inserted_sim.inserted_id)
 
-    runner = SimulationRunner(data)
+    runner = SimulationRunner(sim_input)
     result = runner.run(simulation_id)
 
     # ✅ Make sure simulation_id is a plain string before saving
@@ -125,22 +126,24 @@ async def live_simulation(websocket):
 
     runner = SimulationRunner(data)
     arrivals = runner.poisson.generate_arrivals(data.get("duration", 60))
-    active_drivers = int(100 * data["lambda_d"])
+    base_supply = max(1, int(round(data["lambda_d"])))
+    total_drivers = max(base_supply, int(round(data["lambda_d"] * 100)))
     pending = 0
 
     for entry in arrivals:
         new_req = entry["requests"]
         pending += new_req
-        served = min(active_drivers, pending)
+        available_supply = max(1, min(total_drivers, int(np.random.poisson(base_supply))))
+        served = min(available_supply, pending)
         pending = max(0, pending - served)
 
-        wait_time = round((pending / max(active_drivers, 0.1)) * 5, 2)
+        wait_time = round((pending / max(available_supply, 0.1)) * 5, 2)
         state = runner.markov.next_state()
 
         await websocket.send_json({
             "minute": entry["minute"],
             "demand": new_req,
-            "supply": active_drivers,
+            "supply": available_supply,
             "queue": pending,
             "state": state,
             "wait_time": wait_time

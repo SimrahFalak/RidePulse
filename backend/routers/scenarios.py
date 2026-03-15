@@ -39,7 +39,7 @@ async def seed_scenarios():
     
     defaults = [
         {
-            "name": "Normal Day ☀️",
+            "name": "Normal Day",
             "type": "normal",
             "description": "Regular day, balanced supply and demand",
             "lambda_base": 2.0,
@@ -48,7 +48,7 @@ async def seed_scenarios():
             "duration_minutes": 60
         },
         {
-            "name": "Heavy Rain 🌧️",
+            "name": "Heavy Rain",
             "type": "heavy_rain",
             "description": "Rain causes massive demand spike",
             "lambda_base": 2.0,
@@ -57,7 +57,7 @@ async def seed_scenarios():
             "duration_minutes": 60
         },
         {
-            "name": "Concert Ending 🎤",
+            "name": "Concert Ending",
             "type": "concert",
             "description": "Big concert just ended, everyone needs rides",
             "lambda_base": 2.0,
@@ -66,7 +66,7 @@ async def seed_scenarios():
             "duration_minutes": 30
         },
         {
-            "name": "Cricket Match 🏏",
+            "name": "Cricket Match",
             "type": "cricket",
             "description": "Match just ended at stadium",
             "lambda_base": 2.0,
@@ -75,16 +75,7 @@ async def seed_scenarios():
             "duration_minutes": 45
         },
         {
-            "name": "Driver Bonus 💰",
-            "type": "driver_bonus",
-            "description": "Bonus announced, more drivers come online",
-            "lambda_base": 2.0,
-            "lambda_multiplier": 1.2,
-            "driver_availability": 1.0,
-            "duration_minutes": 60
-        },
-        {
-            "name": "New Year's Eve 🎆",
+            "name": "New Year's Eve",
             "type": "concert",
             "description": "Massive demand on new year midnight",
             "lambda_base": 2.0,
@@ -93,7 +84,7 @@ async def seed_scenarios():
             "duration_minutes": 60
         },
         {
-            "name": "Morning Rush Hour 🌅",
+            "name": "Morning Rush Hour",
             "type": "normal",
             "description": "Office hours morning rush",
             "lambda_base": 2.0,
@@ -102,7 +93,7 @@ async def seed_scenarios():
             "duration_minutes": 90
         },
         {
-            "name": "Midnight Normal 🌙",
+            "name": "Midnight Normal",
             "type": "normal",
             "description": "Late night, low demand",
             "lambda_base": 2.0,
@@ -111,22 +102,13 @@ async def seed_scenarios():
             "duration_minutes": 60
         },
         {
-            "name": "Flood Emergency 🌊",
+            "name": "Flood Emergency",
             "type": "heavy_rain",
             "description": "Extreme flooding, roads blocked",
             "lambda_base": 2.0,
             "lambda_multiplier": 4.0,
             "driver_availability": 0.2,
             "duration_minutes": 120
-        },
-        {
-            "name": "PSL Final 🏏",
-            "type": "cricket",
-            "description": "PSL final match ending in Karachi",
-            "lambda_base": 2.0,
-            "lambda_multiplier": 7.5,
-            "driver_availability": 0.55,
-            "duration_minutes": 45
         }
     ]
     

@@ -3,8 +3,8 @@ import { Slider } from "../components/ui/slider";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Info } from "lucide-react";
 import { useNavigate } from "react-router";
+import { saveLatestSimulationId } from "../lib/simulation";
 
 const rawApiUrl =
   (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL ||
@@ -82,9 +82,11 @@ export function RunSimulation() {
 
       const data = await response.json();
       console.log("Simulation created:", data);
+
+      saveLatestSimulationId(data.simulation_id);
       
       // Navigate to results page with the simulation ID
-      navigate(`/results?id=${data.simulation_id}`);
+      navigate(`/app/results?id=${data.simulation_id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to run simulation");
       console.error("Error running simulation:", err);
@@ -97,7 +99,7 @@ export function RunSimulation() {
     <div className="p-8">
       <div className="max-w-6xl mx-auto grid grid-cols-3 gap-8">
         {/* Main Form */}
-        <div className="col-span-2 bg-white rounded-xl p-8 shadow-sm border border-gray-100 space-y-8">
+        <div className="col-span-2 bg-white p-4 mr-4 space-y-8">
          
          {/* Scenario Presets */}
           <div className="space-y-4">
@@ -110,7 +112,7 @@ export function RunSimulation() {
                   onClick={() => applyPreset(preset, index)}
                   className={`w-full cursor-pointer ${
                     activePreset === index
-                      ? "bg-black text-white hover:bg-black hover:text-white"
+                      ? "bg-gradient-to-r from-blue-700 to-blue-600 text-white border-transparent hover:from-blue-800 hover:to-blue-700 hover:text-white"
                       : ""
                   }`}
                 >
@@ -220,7 +222,7 @@ export function RunSimulation() {
 
           {/* Run Button */}
           <Button 
-            className="w-full" 
+            className="w-full bg-gradient-to-r from-blue-700 to-blue-600 text-white hover:from-blue-800 hover:to-blue-700 border-none shadow-[0_4px_12px_rgba(37,99,235,0.22)]" 
             size="lg"
             onClick={handleRunSimulation}
             disabled={isLoading}
@@ -230,43 +232,54 @@ export function RunSimulation() {
         </div>
 
         {/* Info Panel */}
-        <div className="space-y-6">
-          <div className="bg-blue-50 rounded-xl p-6 border border-blue-100">
-            <div className="flex items-center gap-2 mb-3">
-              <Info className="w-5 h-5 text-blue-600" />
-              <h4 className="font-semibold text-blue-900">Poisson Process</h4>
+        <div className="space-y-5">
+          <h3 className="font-bold text-lg text-slate-900">Simulation Methodology</h3>
+
+          {/* Poisson Process */}
+          <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
+            <div className="mb-3 flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-100">
+                <span className="h-2.5 w-2.5 rounded-full bg-blue-600 block"></span>
+              </div>
+              <h4 className="font-semibold text-slate-900">Poisson Process</h4>
             </div>
-            <p className="text-sm text-blue-800 leading-relaxed">
-              The Poisson process models random arrivals of ride requests over time. The rate parameter λ_r
-              determines the average number of requests per minute.
+            <p className="text-sm leading-6 text-slate-500">
+              Ride requests and driver availability follow Poisson distributions, modeling random arrivals
+              over time. The rate parameter λ controls the average frequency of events per time unit.
             </p>
+            <div className="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-center font-mono text-sm text-slate-700">
+              P(k) = (λ^k × e^(-λ)) / k!
+            </div>
           </div>
 
-          <div className="bg-purple-50 rounded-xl p-6 border border-purple-100">
-            <div className="flex items-center gap-2 mb-3">
-              <Info className="w-5 h-5 text-purple-600" />
-              <h4 className="font-semibold text-purple-900">Markov Chain States</h4>
+          {/* Markov Chain States */}
+          <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
+            <div className="mb-3 flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-100">
+                <span className="h-2.5 w-2.5 rounded-full bg-violet-500 block"></span>
+              </div>
+              <h4 className="font-semibold text-slate-900">Markov Chain States</h4>
             </div>
-            <p className="text-sm text-purple-800 leading-relaxed mb-3">
-              The system transitions between different states:
+            <p className="text-sm leading-6 text-slate-500 mb-4">
+              The system transitions between four operational states based on supply-demand dynamics and market conditions.
             </p>
-            <ul className="text-sm text-purple-800 space-y-2">
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 bg-purple-600 rounded-full mt-1.5 flex-shrink-0"></span>
-                <span><strong>Balanced:</strong> Supply meets demand</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 bg-purple-600 rounded-full mt-1.5 flex-shrink-0"></span>
-                <span><strong>Surge:</strong> High demand, prices increase</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 bg-purple-600 rounded-full mt-1.5 flex-shrink-0"></span>
-                <span><strong>Shortage:</strong> Insufficient drivers</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 bg-purple-600 rounded-full mt-1.5 flex-shrink-0"></span>
-                <span><strong>Degradation:</strong> System instability</span>
-              </li>
+            <ul className="space-y-1">
+              {[
+                { label: "Normal", desc: "Balanced supply and demand", color: "#10b981", text: "text-emerald-700" },
+                { label: "High Demand", desc: "Demand outpaces driver supply", color: "#3b82f6", text: "text-blue-700" },
+                { label: "Driver Shortage", desc: "Insufficient drivers available", color: "#f59e0b", text: "text-amber-700" },
+                { label: "Surge", desc: "Peak load, prices elevated", color: "#ef4444", text: "text-red-700" },
+                { label: "Long Wait", desc: "Extended rider wait times", color: "#6b7280", text: "text-slate-600" },
+                { label: "Cancellations", desc: "High cancellation rate", color: "#8b5cf6", text: "text-violet-700" },
+              ].map((s) => (
+                <li key={s.label} className="flex items-center gap-3 px-1 py-2">
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: s.color }}></span>
+                  <div className="min-w-0">
+                    <span className={`text-sm font-semibold ${s.text}`}>{s.label}</span>
+                    <span className="ml-2 text-xs text-slate-400">{s.desc}</span>
+                  </div>
+                </li>
+              ))}
             </ul>
           </div>
         </div>
