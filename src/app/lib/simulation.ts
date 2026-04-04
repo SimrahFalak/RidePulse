@@ -78,6 +78,15 @@ export function loadLatestSimulationId(): string | null {
   return localStorage.getItem(LATEST_SIMULATION_ID_KEY);
 }
 
+export type SimulationHistoryItem = SimulationInput & {
+  id: string;
+  created_at?: string;
+};
+
+export async function fetchSimulationHistory(): Promise<SimulationHistoryItem[]> {
+  return fetchJson<SimulationHistoryItem[]>(buildSimulationEndpoint("history"));
+}
+
 export async function fetchLatestSimulationId(): Promise<string | null> {
   const history = await fetchJson<Array<{ id: string }>>(buildSimulationEndpoint("history"));
   return history.length > 0 ? history[0].id : null;
