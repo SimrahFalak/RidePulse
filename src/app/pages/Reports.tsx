@@ -57,7 +57,7 @@ export function Reports() {
             </div>
             {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
             <div className="space-y-3">
-              {recentSimulations.map((sim) => {
+              {recentSimulations.map((sim, index) => {
                 const dateLabel = formatDate(sim.created_at);
                 const timeLabel = formatTime(sim.created_at);
                 const parameters = `λ_r: ${sim.lambda_r}, λ_d: ${sim.lambda_d}`;
@@ -71,7 +71,7 @@ export function Reports() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex flex-wrap items-center gap-3 mb-2">
-                          <h4 className="font-semibold text-gray-900">Simulation #{sim.id}</h4>
+                          <h4 className="font-semibold text-gray-900">Simulation # {index + 1}</h4>
                           <span className="text-sm text-gray-500">{dateLabel} at {timeLabel}</span>
                           <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
                             Completed
@@ -112,50 +112,6 @@ export function Reports() {
             </div>
           </div>
         </div>
-
-        {/* <div className="space-y-6">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <h3 className="font-semibold text-lg mb-4 text-gray-900">Report Preview</h3>
-            <div className="border-2 border-gray-200 rounded-lg overflow-hidden">
-              <div className="bg-gray-50 p-4 border-b border-gray-200">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                    RP
-                  </div>
-                  <span className="font-semibold text-sm">RidePulse</span>
-                </div>
-                <h4 className="text-lg font-bold text-gray-900">Simulation Report</h4>
-                <p className="text-xs text-gray-500">Generated on Feb 28, 2026</p>
-              </div>
-              <div className="p-4 space-y-3 bg-white">
-                <div className="space-y-2">
-                  <div className="h-2 bg-gray-200 rounded w-full"></div>
-                  <div className="h-2 bg-gray-200 rounded w-5/6"></div>
-                  <div className="h-2 bg-gray-200 rounded w-4/6"></div>
-                </div>
-                <div className="bg-blue-50 rounded p-2 space-y-1">
-                  <div className="h-1.5 bg-blue-200 rounded w-3/4"></div>
-                  <div className="h-1.5 bg-blue-200 rounded w-full"></div>
-                  <div className="h-1.5 bg-blue-200 rounded w-2/3"></div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-gray-100 rounded h-12"></div>
-                  <div className="bg-gray-100 rounded h-12"></div>
-                </div>
-                <div className="space-y-1">
-                  <div className="h-1.5 bg-gray-200 rounded w-full"></div>
-                  <div className="h-1.5 bg-gray-200 rounded w-5/6"></div>
-                  <div className="h-1.5 bg-gray-200 rounded w-4/6"></div>
-                  <div className="h-1.5 bg-gray-200 rounded w-3/4"></div>
-                </div>
-              </div>
-            </div>
-            <Button className="w-full mt-4">
-              <Download className="w-4 h-4 mr-2" />
-              Download Full Report
-            </Button>
-          </div>
-        </div> */}
       </div>
     </div>
   );
