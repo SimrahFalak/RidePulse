@@ -50,7 +50,7 @@ export function Reports() {
     <div className="p-8 space-y-8 ">
       <div className="grid grid-cols-3 gap-8">
         <div className="col-span-3 space-y-6">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <div className="bg-white px-4  ">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-lg text-gray-900">Recent Simulations</h3>
               {loadingHistory && <span className="text-sm text-gray-500">Loading...</span>}
