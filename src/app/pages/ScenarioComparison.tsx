@@ -1,31 +1,171 @@
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { useEffect, useMemo, useState } from "react";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+
+type ScenarioApi = {
+  id: string;
+  name: string;
+  type: string;
+  description: string;
+  lambda_base: number;
+  lambda_multiplier: number;
+  driver_availability: number;
+  duration_minutes: number;
+};
+
+const rawApiUrl =
+  (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL ||
+  "http://localhost:8000";
+const API_URL = rawApiUrl.replace(/\/+$/, "");
+
+const ROW_PALETTES = [
+  { bg: "#dff8ef", border: "#a7f3d0", label: "#065f46" },
+  { bg: "#e0edff", border: "#bfdbfe", label: "#1e3a8a" },
+  { bg: "#fff4d6", border: "#fde68a", label: "#78350f" },
+  { bg: "#ffe1e7", border: "#fecdd3", label: "#9f1239" },
+  { bg: "#ece5ff", border: "#ddd6fe", label: "#4c1d95" },
+  { bg: "#e7f5ff", border: "#bae6fd", label: "#0c4a6e" },
+  { bg: "#fef3f2", border: "#fecaca", label: "#7f1d1d" },
+  { bg: "#f0fdf4", border: "#bbf7d0", label: "#14532d" },
+];
+
+const SCENARIOS_ENDPOINT = API_URL.endsWith("/api")
+  ? `${API_URL}/scenarios`
+  : `${API_URL}/api/scenarios`;
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
 
 export function ScenarioComparison() {
-  // Comparison table data
-  const scenarios = [
-    { name: "Normal Day", surgeProbability: 12, avgWaitTime: 3.8, stabilityScore: 0.89, driverUtilization: 72 },
-    { name: "Rain Event", surgeProbability: 28, avgWaitTime: 6.2, stabilityScore: 0.72, driverUtilization: 85 },
-    { name: "Concert Event", surgeProbability: 35, avgWaitTime: 8.5, stabilityScore: 0.65, driverUtilization: 92 },
-    { name: "Festival", surgeProbability: 42, avgWaitTime: 11.2, stabilityScore: 0.58, driverUtilization: 96 },
-    { name: "Holiday Season", surgeProbability: 25, avgWaitTime: 5.5, stabilityScore: 0.78, driverUtilization: 88 },
-  ];
+  const [scenarios, setScenarios] = useState<ScenarioApi[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Multi-line chart data
-  const timeSeriesData = [
-    { time: "00:00", normal: 10, rain: 15, concert: 20, festival: 25 },
-    { time: "04:00", normal: 8, rain: 12, concert: 15, festival: 18 },
-    { time: "08:00", normal: 15, rain: 25, concert: 30, festival: 35 },
-    { time: "12:00", normal: 12, rain: 22, concert: 28, festival: 32 },
-    { time: "16:00", normal: 14, rain: 24, concert: 32, festival: 38 },
-    { time: "20:00", normal: 18, rain: 35, concert: 45, festival: 52 },
-    { time: "24:00", normal: 11, rain: 18, concert: 22, festival: 28 },
-  ];
+  useEffect(() => {
+    let cancelled = false;
 
-  // Bar chart data for surge probability
-  const surgeData = scenarios.map(s => ({
-    name: s.name,
-    surge: s.surgeProbability,
+    const loadScenarios = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch(SCENARIOS_ENDPOINT);
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `HTTP ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ""}`
+          );
+        }
+
+        const payload = (await response.json()) as ScenarioApi[];
+        if (!cancelled) {
+          setScenarios(payload);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Failed to load scenarios.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadScenarios();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const scenarioMetrics = useMemo(
+    () =>
+      scenarios.map((scenario) => {
+        const demandIntensity = Number((scenario.lambda_base * scenario.lambda_multiplier).toFixed(2));
+        const driverCoverage = Number((scenario.driver_availability * 100).toFixed(1));
+
+        // Derived comparison metrics from scenario API fields.
+        const surgeProbability = clamp(
+          Number((((scenario.lambda_multiplier - 1) * 18) + ((1 - scenario.driver_availability) * 45) + 10).toFixed(1)),
+          0,
+          100
+        );
+        const avgWaitTime = Number(
+          ((scenario.duration_minutes / 60) * scenario.lambda_multiplier * (1.15 - scenario.driver_availability) * 8)
+            .toFixed(2)
+        );
+        const stabilityScore = clamp(
+          Number((100 - (surgeProbability * 0.6) - ((100 - driverCoverage) * 0.3)).toFixed(1)),
+          0,
+          100
+        );
+        const driverUtilization = clamp(
+          Number((((scenario.lambda_multiplier * 50) / Math.max(scenario.driver_availability, 0.2)) / 2).toFixed(1)),
+          0,
+          100
+        );
+
+        return {
+          ...scenario,
+          demandIntensity,
+          driverCoverage,
+          surgeProbability,
+          avgWaitTime,
+          stabilityScore,
+          driverUtilization,
+        };
+      }),
+    [scenarios]
+  );
+
+  const intensityComparisonData = scenarioMetrics.map((scenario) => ({
+    name: scenario.name,
+    demandIntensity: scenario.demandIntensity,
+    driverCoverage: scenario.driverCoverage,
   }));
+
+  const surgeData = scenarioMetrics.map((scenario) => ({
+    name: scenario.name,
+    surge: scenario.surgeProbability,
+  }));
+
+  const highestSurge = [...scenarioMetrics].sort((a, b) => b.surgeProbability - a.surgeProbability)[0];
+  const bestStability = [...scenarioMetrics].sort((a, b) => b.stabilityScore - a.stabilityScore)[0];
+
+  if (loading) {
+    return <div className="p-8 text-gray-600">Loading scenarios...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
+          <strong>Unable to load scenarios:</strong> {error}
+        </div>
+      </div>
+    );
+  }
+
+  if (scenarioMetrics.length === 0) {
+    return (
+      <div className="p-8">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-amber-800">
+          <strong>No scenarios found.</strong> Add scenarios from backend and reload this page.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-8">
@@ -33,9 +173,9 @@ export function ScenarioComparison() {
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
         <h3 className="font-semibold text-lg mb-4 text-gray-900">Scenario Comparison Table</h3>
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full border-separate border-spacing-y-2">
             <thead>
-              <tr className="border-b-2 border-gray-300">
+              <tr>
                 <th className="text-left p-3 font-semibold text-gray-900">Scenario</th>
                 <th className="text-center p-3 font-semibold text-gray-900">Surge Probability (%)</th>
                 <th className="text-center p-3 font-semibold text-gray-900">Avg Wait Time (min)</th>
@@ -44,50 +184,54 @@ export function ScenarioComparison() {
               </tr>
             </thead>
             <tbody>
-              {scenarios.map((scenario, idx) => (
-                <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
-                  <td className="p-3 font-medium text-gray-900">{scenario.name}</td>
-                  <td className="text-center p-3">
-                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                      scenario.surgeProbability > 35 ? "bg-red-100 text-red-700" :
-                      scenario.surgeProbability > 20 ? "bg-orange-100 text-orange-700" :
-                      "bg-green-100 text-green-700"
-                    }`}>
-                      {scenario.surgeProbability}%
-                    </span>
-                  </td>
-                  <td className="text-center p-3 text-gray-700">{scenario.avgWaitTime}</td>
-                  <td className="text-center p-3 text-gray-700">{scenario.stabilityScore}</td>
-                  <td className="text-center p-3 text-gray-700">{scenario.driverUtilization}%</td>
-                </tr>
-              ))}
+              {scenarioMetrics.map((scenario, idx) => {
+                const palette = ROW_PALETTES[idx % ROW_PALETTES.length];
+                return (
+                  <tr key={idx} style={{ backgroundColor: palette.bg }}>
+                    <td
+                      className="p-3 font-semibold rounded-l-lg whitespace-nowrap"
+                      style={{ color: palette.label }}
+                    >
+                      {scenario.name}
+                    </td>
+                    <td className="text-center p-3">
+                      <span
+                        className="inline-block px-3 py-1 rounded-full text-sm font-medium"
+                        style={{
+                          backgroundColor:
+                            scenario.surgeProbability > 35
+                              ? "#fee2e2"
+                              : scenario.surgeProbability > 20
+                              ? "#ffedd5"
+                              : "#dcfce7",
+                          color:
+                            scenario.surgeProbability > 35
+                              ? "#b91c1c"
+                              : scenario.surgeProbability > 20
+                              ? "#c2410c"
+                              : "#15803d",
+                        }}
+                      >
+                        {scenario.surgeProbability}%
+                      </span>
+                    </td>
+                    <td className="text-center p-3 text-gray-700">{scenario.avgWaitTime.toFixed(2)}</td>
+                    <td className="text-center p-3 text-gray-700">{scenario.stabilityScore.toFixed(1)}</td>
+                    <td className="text-center p-3 text-gray-700 rounded-r-lg">{scenario.driverUtilization}%</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Multi-line Chart */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-        <h3 className="font-semibold text-lg mb-4 text-gray-900">Wait Time Comparison Over Time</h3>
-        <ResponsiveContainer width="100%" height={350}>
-          <LineChart data={timeSeriesData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="time" stroke="#9ca3af" />
-            <YAxis stroke="#9ca3af" label={{ value: 'Wait Time (min)', angle: -90, position: 'insideLeft' }} />
-            <Tooltip />
-            <Legend />
-            <Line type="monotone" dataKey="normal" stroke="#10b981" strokeWidth={2} name="Normal Day" />
-            <Line type="monotone" dataKey="rain" stroke="#3b82f6" strokeWidth={2} name="Rain Event" />
-            <Line type="monotone" dataKey="concert" stroke="#f59e0b" strokeWidth={2} name="Concert Event" />
-            <Line type="monotone" dataKey="festival" stroke="#ef4444" strokeWidth={2} name="Festival" />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+
 
       {/* Bar Chart */}
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
         <h3 className="font-semibold text-lg mb-4 text-gray-900">Surge Probability Comparison</h3>
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={380}>
           <BarChart data={surgeData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis dataKey="name" stroke="#9ca3af" />
@@ -98,38 +242,7 @@ export function ScenarioComparison() {
         </ResponsiveContainer>
       </div>
 
-      {/* Insight Summary */}
-      <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-100">
-        <h3 className="font-semibold text-lg mb-4 text-gray-900">Auto-Generated Insights</h3>
-        <div className="space-y-4">
-          <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4">
-            <h4 className="font-semibold text-blue-900 mb-2">Key Finding #1</h4>
-            <p className="text-gray-700">
-              Festival scenarios show a <strong>250% increase</strong> in surge probability compared to normal days,
-              with average wait times exceeding 11 minutes. This suggests critical need for dynamic driver allocation
-              during major events.
-            </p>
-          </div>
-          
-          <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4">
-            <h4 className="font-semibold text-blue-900 mb-2">Key Finding #2</h4>
-            <p className="text-gray-700">
-              System stability scores decrease by <strong>35%</strong> during high-demand scenarios. Implementing
-              predictive surge pricing 30 minutes before peak demand could improve stability by recruiting more drivers
-              proactively.
-            </p>
-          </div>
-          
-          <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4">
-            <h4 className="font-semibold text-blue-900 mb-2">Recommendation</h4>
-            <p className="text-gray-700">
-              Based on the comparison, consider implementing an <strong>event-aware pricing algorithm</strong> that
-              adjusts rates based on historical event patterns. This could reduce wait times by up to 40% while
-              maintaining driver utilization above 80%.
-            </p>
-          </div>
-        </div>
-      </div>
+    
     </div>
   );
 }
